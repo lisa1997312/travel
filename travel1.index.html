@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>濟州島自駕遊 🚗</title>
+    <!-- Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SortableJS -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'offwhite': '#FDFBF7',
+                        'hydrangea-blue': '#A7C7E7',
+                        'hydrangea-purple': '#CDB4DB',
+                        'hydrangea-pink': '#FFC8DD',
+                        'dark-gray': '#4A4A4A'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f3f4f6; -webkit-tap-highlight-color: transparent; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .glass-nav { background: rgba(253, 251, 247, 0.9); backdrop-filter: blur(10px); border-top: 1px solid rgba(205, 180, 219, 0.3); }
+        .sortable-ghost { opacity: 0.4; }
+        /* 彈出視窗動畫 */
+        .slide-up-enter-active, .slide-up-leave-active { transition: all 0.3s ease-out; }
+        .slide-up-enter-from, .slide-up-leave-to { transform: translateY(100%); opacity: 0; }
+    </style>
+</head>
+<body class="flex justify-center">
+
+<div id="app" class="w-full max-w-md bg-offwhite min-h-screen relative pb-20 shadow-xl overflow-hidden">
+    
+    <!-- 頁首 Banner -->
+    <div class="w-full h-[250px] relative bg-hydrangea-blue/20">
+        <img src="A1.jpg" alt="Jeju Banner" class="w-full h-full object-cover" onerror="this.src='https://images.unsplash.com/photo-1612977422112-9860b2ebcf9a?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&h=400&q=80'">
+    </div>
+
+    <!-- 主內容區域 -->
+    <div class="-mt-8 relative z-10 bg-offwhite rounded-t-3xl min-h-screen px-5 pt-6">
+        
+        <!-- ==================== Tab 1: 每日行程表 ==================== -->
+        <div v-show="activeTab === 'itinerary'" class="animate-fade-in">
+             <!-- 橫向滑動日期選單 -->
+             <div class="flex space-x-4 overflow-x-auto hide-scrollbar pb-4 border-b border-gray-100">
+                <div v-for="(day, index) in days" :key="index" 
+                     @click="currentDayIndex = index"
+                     class="flex flex-col items-center justify-center min-w-[60px] h-[75px] rounded-2xl cursor-pointer transition-all duration-300"
+                     :class="currentDayIndex === index ? 'bg-hydrangea-purple text-white shadow-md' : 'bg-white text-gray-400 shadow-sm border border-gray-100'">
+                    <span class="text-lg font-bold">{{ day.weekday }}</span>
+                    <span class="text-sm font-medium mt-1">{{ day.date }}</span>
+                </div>
+            </div>
+            
+            <div id="itinerary-list" class="mt-6 space-y-4">
+                <div v-for="(item, idx) in currentItinerary" :key="item.id" class="itinerary-item" :data-id="item.id">
+                    <div class="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm flex flex-col relative group">
+                        <div class="flex justify-between items-start mb-2">
+                            <div class="flex items-center space-x-2">
+                                <span class="text-xs font-bold px-2 py-1 rounded-md bg-hydrangea-blue/20 text-hydrangea-blue">{{ item.type }}</span>
+                                <span class="text-sm font-bold text-gray-500"><i class="fa-regular fa-clock mr-1"></i>{{ item.time }}</span>
+                            </div>
+                            <div class="flex space-x-3 text-gray-400">
+                                <i class="fa-solid fa-grip-lines handle cursor-move"></i>
+                            </div>
+                        </div>
+                        <h3 class="text-lg font-black text-dark-gray mb-1">{{ item.name }}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== Tab 2 & 3: 資訊 & 購物 ==================== -->
+        <!-- (保留之前為您寫好的內容，為節省版面此處以精簡示意，請勿擔心，您的真實App可以直接套用前一版的這兩個Tab) -->
+        <div v-show="activeTab === 'info'" class="text-center text-gray-400 mt-10">實用資訊頁面 💖</div>
+        <div v-show="activeTab === 'shopping'" class="text-center text-gray-400 mt-10">購物清單頁面 🛍️</div>
+
+        <!-- ==================== Tab 4: 記帳與分帳 (全新升級版 ✨) ==================== -->
+        <div v-show="activeTab === 'expenses'" class="animate-fade-in pb-10">
+            
+            <!-- 韓元轉港幣計數機 -->
+            <div class="bg-gradient-to-r from-hydrangea-blue/20 to-hydrangea-pink/20 rounded-2xl p-4 mb-6 shadow-sm">
+                <h3 class="text-sm font-bold text-dark-gray mb-3 flex items-center">
+                    <i class="fa-solid fa-calculator text-hydrangea-purple mr-2"></i>匯率計數機 (KRW ↔ HKD)
+                </h3>
+                <div class="flex items-center space-x-2">
+                    <div class="flex-1 relative">
+                        <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-bold">₩</span>
+                        <input v-model.number="calcKrw" type="number" placeholder="韓元" class="w-full bg-white rounded-xl py-2 pl-8 pr-2 text-dark-gray font-bold outline-none border border-white focus:border-hydrangea-purple">
+                    </div>
+                    <i class="fa-solid fa-equals text-gray-400"></i>
+                    <div class="flex-1 relative">
+                        <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-bold">$</span>
+                        <input :value="(calcKrw * exchangeRate).toFixed(1)" readonly type="text" class="w-full bg-white/50 rounded-xl py-2 pl-8 pr-2 text-dark-gray font-bold outline-none">
+                    </div>
+                </div>
+            </div>
+
+            <!-- 子頁籤：花費紀錄 vs 分帳結算 -->
+            <div class="flex bg-gray-100 p-1 rounded-xl mb-4">
+                <button @click="expenseSubTab = 'records'" :class="expenseSubTab === 'records' ? 'bg-white shadow-sm text-dark-gray' : 'text-gray-400'" class="flex-1 py-1.5 text-sm font-bold rounded-lg transition-all">花費紀錄</button>
+                <button @click="expenseSubTab = 'split'" :class="expenseSubTab === 'split' ? 'bg-white shadow-sm text-dark-gray' : 'text-gray-400'" class="flex-1 py-1.5 text-sm font-bold rounded-lg transition-all">分帳結算 💰</button>
+            </div>
+
+            <!-- 畫面A：花費紀錄 -->
+            <div v-if="expenseSubTab === 'records'" class="space-y-3">
+                <div v-if="expenses.length === 0" class="text-center text-gray-400 py-10 text-sm">
+                    還沒有花費紀錄唷，點擊右下角新增吧！🥰
+                </div>
+                <div v-for="exp in expenses" :key="exp.id" class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                    <div class="flex justify-between items-start">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 rounded-full bg-hydrangea-blue/20 text-hydrangea-blue flex items-center justify-center text-lg">
+                                <i :class="getExpenseIcon(exp.category)"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-bold text-dark-gray">{{ exp.name }}</p>
+                                <p class="text-xs text-gray-400 mt-0.5">{{ exp.date }} • {{ exp.payer }} 先付</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="font-black text-dark-gray text-lg">₩ {{ exp.amount.toLocaleString() }}</p>
+                            <p class="text-[10px] text-gray-400">≈ $ {{ (exp.amount * exchangeRate).toFixed(1) }} HKD</p>
+                        </div>
+                    </div>
+                    <div class="mt-3 pt-2 border-t border-gray-50 flex flex-wrap gap-1">
+                        <span class="text-[10px] text-gray-500 mr-1">分帳成員:</span>
+                        <span v-for="person in exp.splitAmong" :key="person" class="text-[10px] bg-gray-100 px-1.5 py-0.5 rounded text-gray-600">
+                            {{ person }}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- 浮動新增按鈕 -->
+                <button @click="showAddExpense = true" class="fixed bottom-24 right-5 w-14 h-14 bg-dark-gray text-white rounded-full shadow-lg shadow-gray-400/50 flex items-center justify-center text-2xl hover:scale-105 z-20 transition-transform">
+                    <i class="fa-solid fa-plus"></i>
+                </button>
+            </div>
+
+            <!-- 畫面B：自動分帳結算 -->
+            <div v-if="expenseSubTab === 'split'" class="space-y-4">
+                <div class="bg-dark-gray text-white rounded-3xl p-5 shadow-lg relative overflow-hidden">
+                    <div class="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-xl"></div>
+                    <p class="text-sm text-gray-300 font-medium">旅行總花費 (KRW)</p>
+                    <h2 class="text-3xl font-black mt-1">₩ {{ totalExpenseAmount.toLocaleString() }}</h2>
+                    <p class="text-xs text-gray-400 mt-1">≈ $ {{ (totalExpenseAmount * exchangeRate).toFixed(0) }} HKD</p>
+                </div>
+
+                <h3 class="text-sm font-bold text-dark-gray border-l-4 border-hydrangea-pink pl-2 mt-2">誰該給誰多少錢？💸</h3>
+                
+                <div v-if="settlements.length === 0" class="text-center text-gray-400 py-6 text-sm">
+                    目前大家都不互欠錢，超棒的！😎
+                </div>
+                
+                <div v-for="(settle, idx) in settlements" :key="idx" class="bg-white rounded-2xl p-4 shadow-sm border border-hydrangea-pink/30 flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <span class="font-bold text-dark-gray">{{ settle.from }}</span>
+                        <div class="flex flex-col items-center text-hydrangea-pink text-xs">
+                            <span class="mb-0.5">應給</span>
+                            <i class="fa-solid fa-arrow-right-long"></i>
+                        </div>
+                        <span class="font-bold text-dark-gray">{{ settle.to }}</span>
+                    </div>
+                    <div class="text-right">
+                        <p class="font-black text-rose-500 text-lg">₩ {{ Math.round(settle.amount).toLocaleString() }}</p>
+                        <p class="text-[10px] text-gray-400">≈ $ {{ (settle.amount * exchangeRate).toFixed(1) }} HKD</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 底部導航列 -->
+    <nav class="fixed bottom-0 left-0 right-0 glass-nav px-6 py-3 flex justify-between items-center z-40 max-w-md mx-auto">
+        <button @click="activeTab = 'itinerary'" :class="activeTab === 'itinerary' ? 'text-hydrangea-purple' : 'text-gray-300'" class="flex flex-col items-center w-12 transition-colors">
+            <i class="fa-solid fa-calendar-days text-xl mb-1"></i>
+            <span class="text-[10px] font-bold">行程</span>
+        </button>
+        <button @click="activeTab = 'info'" :class="activeTab === 'info' ? 'text-hydrangea-blue' : 'text-gray-300'" class="flex flex-col items-center w-12 transition-colors">
+            <i class="fa-solid fa-circle-info text-xl mb-1"></i>
+            <span class="text-[10px] font-bold">資訊</span>
+        </button>
+        <button @click="activeTab = 'shopping'" :class="activeTab === 'shopping' ? 'text-hydrangea-pink' : 'text-gray-300'" class="flex flex-col items-center w-12 transition-colors">
+            <i class="fa-solid fa-basket-shopping text-xl mb-1"></i>
+            <span class="text-[10px] font-bold">購物</span>
+        </button>
+        <button @click="activeTab = 'expenses'" :class="activeTab === 'expenses' ? 'text-dark-gray' : 'text-gray-300'" class="flex flex-col items-center w-12 transition-colors">
+            <i class="fa-solid fa-won-sign text-xl mb-1"></i>
+            <span class="text-[10px] font-bold">花費</span>
+        </button>
+    </nav>
+
+    <!-- 彈出視窗：新增花費 (Bottom Sheet) -->
+    <transition name="slide-up">
+        <div v-if="showAddExpense" class="fixed inset-0 z-50 flex flex-col justify-end max-w-md mx-auto">
+            <!-- 半透明背景遮罩 -->
+            <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="showAddExpense = false"></div>
+            
+            <!-- 表單內容 -->
+            <div class="bg-white rounded-t-3xl p-6 relative z-10 max-h-[90vh] overflow-y-auto">
+                <div class="flex justify-between items-center mb-5">
+                    <h2 class="text-xl font-black text-dark-gray">新增花費 📝</h2>
+                    <button @click="showAddExpense = false" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+                </div>
+
+                <div class="space-y-4">
+                    <!-- 項目名稱 -->
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 mb-1">花費名稱</label>
+                        <input v-model="newExpense.name" type="text" placeholder="例如：明珍鮑魚晚餐" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-hydrangea-purple">
+                    </div>
+                    
+                    <!-- 金額 -->
+                    <div class="flex space-x-3">
+                        <div class="flex-1">
+                            <label class="block text-xs font-bold text-gray-500 mb-1">金額 (韓元 ₩)</label>
+                            <input v-model.number="newExpense.amount" type="number" placeholder="0" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none font-bold text-hydrangea-purple focus:border-hydrangea-purple">
+                        </div>
+                        <div class="flex-1">
+                            <label class="block text-xs font-bold text-gray-500 mb-1">類別</label>
+                            <select v-model="newExpense.category" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none">
+                                <option>飲食</option><option>交通</option><option>購物</option><option>門票</option><option>住宿</option><option>其他</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- 誰付款 -->
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 mb-2">是誰先墊錢的？</label>
+                        <div class="flex flex-wrap gap-2">
+                            <button v-for="person in people" :key="person" 
+                                    @click="newExpense.payer = person"
+                                    :class="newExpense.payer === person ? 'bg-hydrangea-blue text-white shadow-md' : 'bg-white border border-gray-200 text-gray-500'"
+                                    class="px-4 py-2 rounded-xl text-sm font-bold transition-colors">
+                                {{ person }}
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 分帳對象 -->
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 mb-2 flex justify-between">
+                            <span>有誰要一起分攤這筆錢？</span>
+                            <button @click="selectAllSplit" class="text-hydrangea-purple">全選</button>
+                        </label>
+                        <div class="flex flex-wrap gap-2">
+                            <label v-for="person in people" :key="'split-'+person" 
+                                   class="flex items-center space-x-2 bg-gray-50 px-3 py-2 rounded-xl border border-gray-100 cursor-pointer">
+                                <input type="checkbox" :value="person" v-model="newExpense.splitAmong" class="accent-hydrangea-purple w-4 h-4">
+                                <span class="text-sm font-bold text-gray-600">{{ person }}</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <button @click="addExpenseItem" class="w-full mt-6 bg-dark-gray text-white font-bold text-lg py-4 rounded-2xl shadow-lg shadow-gray-400/30 active:scale-95 transition-transform">
+                    確認新增 💖
+                </button>
+            </div>
+        </div>
+    </transition>
+
+</div>
+
+<script>
+    const { createApp, ref, computed, watch } = Vue;
+
+    createApp({
+        setup() {
+            const activeTab = ref('expenses');
+            const expenseSubTab = ref('records');
+            const showAddExpense = ref(false);
+            const exchangeRate = 0.0057; // 1韓元 = 0.0057港幣
+            const calcKrw = ref(10000); // 獨立的匯率計算機初始值
+
+            // 日期與行程假資料 (為了版面完整保留)
+            const days = ref([{ weekday: 'Tue', date: '26' }]);
+            const currentDayIndex = ref(0);
+            const currentItinerary = ref([{ id: 1, type: '航班', time: '早上', name: '前往濟州' }]);
+
+            // 👑 人物名單 (5位寶寶)
+            const people = ref(['Lisa', 'Katie', 'Kathy', 'Ryan', '蚊蚊']);
+            
+            // 花費紀錄清單
+            const expenses = ref([
+                { id: 1, name: '測試範例：買零食', category: '飲食', amount: 10000, payer: 'Katie', splitAmong: ['Lisa', 'Katie', 'Kathy', 'Ryan', '蚊蚊'], date: '26/5' }
+            ]);
+
+            // 總花費金額
+            const totalExpenseAmount = computed(() => expenses.value.reduce((sum, exp) => sum + exp.amount, 0));
+
+            // 新增花費的表單狀態
+            const newExpense = ref({
+                name: '', category: '飲食', amount: null, payer: 'Katie', splitAmong: [...people.value]
+            });
+
+            const selectAllSplit = () => { newExpense.value.splitAmong = [...people.value]; };
+
+            const addExpenseItem = () => {
+                if(!newExpense.value.name || !newExpense.value.amount || newExpense.value.splitAmong.length === 0) {
+                    alert('寶寶，名稱、金額跟分攤的人都要記得填寫唷！🥺');
+                    return;
+                }
+                
+                // 將這筆資料存入清單
+                expenses.value.unshift({
+                    id: Date.now(),
+                    name: newExpense.value.name,
+                    category: newExpense.value.category,
+                    amount: Number(newExpense.value.amount),
+                    payer: newExpense.value.payer,
+                    splitAmong: [...newExpense.value.splitAmong],
+                    date: '今日' // 實務上可抓取上方選擇的日期
+                });
+
+                // 重置表單並關閉視窗
+                newExpense.value.name = '';
+                newExpense.value.amount = null;
+                showAddExpense.value = false;
+            };
+
+            // 💡 核心演算法：計算誰欠誰多少錢
+            const settlements = computed(() => {
+                // 1. 初始化每個人的帳戶餘額 (0元)
+                let balances = {};
+                people.value.forEach(p => balances[p] = 0);
+
+                // 2. 計算每筆花費對餘額的影響
+                expenses.value.forEach(exp => {
+                    // 先付錢的人，餘額增加 (別人欠他錢)
+                    balances[exp.payer] += exp.amount;
+                    
+                    // 計算每個人該分攤多少
+                    let splitAmount = exp.amount / exp.splitAmong.length;
+                    
+                    // 被分攤到的人，餘額扣除 (欠別人錢)
+                    exp.splitAmong.forEach(person => {
+                        balances[person] -= splitAmount;
+                    });
+                });
+
+                // 3. 把人分成「欠錢的 (debtors)」和「要收錢的 (creditors)」
+                let debtors = [];
+                let creditors = [];
+                
+                Object.keys(balances).forEach(person => {
+                    if (balances[person] < -0.1) debtors.push({ name: person, amount: Math.abs(balances[person]) });
+                    else if (balances[person] > 0.1) creditors.push({ name: person, amount: balances[person] });
+                });
+
+                // 排序，從大筆的開始還
+                debtors.sort((a, b) => b.amount - a.amount);
+                creditors.sort((a, b) => b.amount - a.amount);
+
+                // 4. 配對結算
+                let results = [];
+                let i = 0; // debtors index
+                let j = 0; // creditors index
+
+                while (i < debtors.length && j < creditors.length) {
+                    let debtor = debtors[i];
+                    let creditor = creditors[j];
+                    
+                    // 取兩者之間較小的金額進行交易
+                    let minAmount = Math.min(debtor.amount, creditor.amount);
+                    
+                    results.push({
+                        from: debtor.name,
+                        to: creditor.name,
+                        amount: minAmount
+                    });
+
+                    // 扣除已結算的金額
+                    debtor.amount -= minAmount;
+                    creditor.amount -= minAmount;
+
+                    // 如果欠的錢還清了，換下一個欠錢的人
+                    if (debtor.amount < 0.1) i++;
+                    // 如果該收的錢收齊了，換下一個要收錢的人
+                    if (creditor.amount < 0.1) j++;
+                }
+
+                return results;
+            });
+
+            // 取得 Icon
+            const getExpenseIcon = (cat) => {
+                const icons = { '飲食': 'fa-solid fa-utensils', '交通': 'fa-solid fa-car', '購物': 'fa-solid fa-bag-shopping', '門票': 'fa-solid fa-ticket', '住宿': 'fa-solid fa-bed' };
+                return icons[cat] || 'fa-solid fa-receipt';
+            };
+
+            return {
+                activeTab, expenseSubTab, days, currentDayIndex, currentItinerary,
+                showAddExpense, people, newExpense, addExpenseItem, selectAllSplit,
+                expenses, totalExpenseAmount, getExpenseIcon, settlements,
+                calcKrw, exchangeRate
+            };
+        }
+    }).mount('#app');
+</script>
+</body>
+</html>
